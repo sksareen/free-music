@@ -348,10 +348,10 @@
     </div>
 
     <!-- Up next -->
-    <div class="up-next" id="upNext">
+    <div class="up-next" id="upNext" onclick="skipNext()" style="cursor:pointer" title="Click to skip to this track">
       <img class="up-next-art" id="upNextArt" src="">
       <div>
-        <div class="up-next-label">Up next</div>
+        <div class="up-next-label">Up next (click to skip)</div>
         <div class="up-next-name" id="upNextName"></div>
         <div class="up-next-artist" id="upNextArtist"></div>
       </div>
@@ -604,16 +604,64 @@ function togglePlay() {
 }
 
 function skipNext() {
+  document.getElementById('btnNext').disabled = true;
   audio.pause();
   stopProgress();
   setWaveformActive(false);
   advanceToNext();
+  // Re-enable after a short delay to prevent spam
+  setTimeout(() => { document.getElementById('btnNext').disabled = false; }, 1000);
 }
 
 function goBack() {
   if (history.length === 0) return;
-  // Can't truly go back (no stored audio), but could re-fetch
-  // For now, just a placeholder
+  const prev = history.pop();
+  // Push current track back as "next" so we don't lose it
+  if (currentTrack) {
+    nextTrack = {
+      ...currentTrack,
+      intro: '',
+    };
+    // Preload its audio
+    nextAudio = new Audio(currentTrack.preview_url);
+    nextAudio.preload = 'auto';
+    nextAudio.load();
+    updateUpNext(nextTrack);
+    playedIds.delete(currentTrack.id);
+  }
+  // Fetch and play the previous track from embed
+  const prevTrack = { name: prev.name, artists: prev.artist, id: prev.id };
+  audio.pause();
+  stopProgress();
+  setWaveformActive(false);
+
+  // Re-fetch embed data for the previous track
+  fetch(`/api/embed/${prev.id}`).then(r => r.json()).then(data => {
+    if (data.preview_url) {
+      playedIds.delete(prev.id); // remove so it can be "current" again
+      // Manually set up the track without pushing to history again
+      currentTrack = data;
+      playedIds.add(data.id);
+      updateTrackUI(data);
+      document.getElementById('btnPrev').disabled = history.length === 0;
+      audio = new Audio(data.preview_url);
+      audio.play();
+      isPlaying = true;
+      setPlayIcon(true);
+      setWaveformActive(true);
+      startProgress();
+      audio.onended = () => {
+        isPlaying = false;
+        setPlayIcon(false);
+        setWaveformActive(false);
+        stopProgress();
+        advanceToNext();
+      };
+    }
+  }).catch(() => {
+    // If embed fails, just skip
+    history.push(prev);
+  });
 }
 
 // ── Start ───────────────────────────────────────────────────────────

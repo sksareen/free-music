@@ -174,6 +174,15 @@ async def index():
     return Path(__file__).parent.joinpath("radio.html").read_text()
 
 
+@app.get("/api/embed/{track_id}")
+async def embed(track_id: str):
+    """Get embed data for a specific track ID."""
+    data = get_embed(track_id)
+    if data:
+        return format_track(data)
+    return JSONResponse({"error": "Track not found"}, status_code=404)
+
+
 @app.get("/api/start")
 async def start():
     """Return a random seed track."""
