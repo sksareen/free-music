@@ -1,0 +1,12 @@
+[project]
+name = "spotify-client"
+version = "0.1.0"
+description = "Spotify Web Player client — no browser, no OAuth, no API keys. Extracts TOTP secrets from JS bundles at runtime."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = [
+    "httpx>=0.28.1",
+    "openai>=2.29.0",
+    "pyotp>=2.9.0",
+]
