@@ -1,6 +1,6 @@
-# spotify-client
+# free-music-client
 
-Spotify Web Player client in Python. No browser, no OAuth, no API keys needed.
+Music Web Player client in Python. No browser, no OAuth, no API keys needed.
 
 Extracts TOTP secrets from Spotify's JS bundle at runtime (like [yt-dlp](https://github.com/yt-dlp/yt-dlp) extracts YouTube's signature cipher) and generates access tokens programmatically.
 
