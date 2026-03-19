@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinite Radio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #1a1a2e;
+    --fg: #ffffff;
+    --fg-dim: rgba(255,255,255,0.5);
+    --accent: rgba(255,255,255,0.1);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: background 1s ease, color 0.5s ease;
+    overflow: hidden;
+  }
+
+  .container {
+    max-width: 480px;
+    width: 100%;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .brand {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    margin-bottom: 2rem;
+  }
+
+  .brand span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #1DB954;
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+
+  .album-art {
+    width: 280px;
+    height: 280px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin: 0 auto 1.5rem;
+    display: block;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transition: opacity 0.4s ease;
+  }
+
+  .album-art.loading {
+    opacity: 0.3;
+  }
+
+  .track-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+  }
+
+  .track-artist {
+    font-size: 1rem;
+    color: var(--fg-dim);
+    margin-bottom: 1.25rem;
+  }
+
+  .intro {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--fg-dim);
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    min-height: 2.5em;
+    transition: opacity 0.3s;
+  }
+
+  /* Progress bar */
+  .progress-container {
+    width: 100%;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--fg);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s linear;
+  }
+
+  .time-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--fg-dim);
+    margin-bottom: 1.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .btn {
+    background: none;
+    border: none;
+    color: var(--fg);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: transform 0.15s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn:hover { transform: scale(1.1); }
+  .btn:active { transform: scale(0.95); }
+  .btn:disabled { opacity: 0.2; cursor: default; transform: none; }
+
+  .btn-play {
+    width: 64px;
+    height: 64px;
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .btn-play svg { fill: var(--bg); }
+  .btn svg { fill: var(--fg); width: 24px; height: 24px; }
+  .btn-play svg { width: 28px; height: 28px; }
+
+  /* Up next */
+  .up-next {
+    background: var(--accent);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s, transform 0.4s;
+    min-height: 60px;
+  }
+
+  .up-next.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .up-next-art {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .up-next-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--fg-dim);
+  }
+
+  .up-next-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .up-next-artist {
+    font-size: 0.75rem;
+    color: var(--fg-dim);
+  }
+
+  /* History */
+  .history {
+    margin-top: 1rem;
+  }
+
+  .history-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--fg-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  .history-item {
+    font-size: 0.75rem;
+    color: var(--fg-dim);
+    padding: 0.2rem 0;
+  }
+
+  /* Waveform */
+  .waveform {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2px;
+    height: 32px;
+    margin-bottom: 1rem;
+  }
+
+  .waveform .bar {
+    width: 3px;
+    background: var(--fg);
+    border-radius: 1.5px;
+    opacity: 0.3;
+    transition: height 0.15s ease;
+  }
+
+  .waveform .bar.active {
+    opacity: 0.8;
+    animation: wave 0.8s ease-in-out infinite;
+  }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Loading state */
+  .loading-text {
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+    animation: fadeInOut 1.5s ease-in-out infinite;
+  }
+
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+  }
+
+  .start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .start-screen h1 {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .start-screen p {
+    color: var(--fg-dim);
+    font-size: 0.9rem;
+    max-width: 300px;
+    line-height: 1.5;
+  }
+
+  .start-btn {
+    background: #1DB954;
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+  }
+
+  .start-btn:hover { transform: scale(1.05); background: #1ed760; }
+  .start-btn:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- Start screen -->
+  <div class="start-screen" id="startScreen">
+    <div class="brand"><span></span>INFINITE RADIO</div>
+    <h1>Infinite Radio</h1>
+    <p>AI-curated music that never stops. Each track flows into the next, creating a journey that's never the same twice.</p>
+    <button class="start-btn" onclick="startRadio()">Start Listening</button>
+  </div>
+
+  <!-- Player (hidden initially) -->
+  <div id="player" style="display:none">
+    <div class="brand"><span></span>INFINITE RADIO</div>
+
+    <img class="album-art" id="albumArt" src="" alt="Album art">
+
+    <div class="track-name" id="trackName">Loading...</div>
+    <div class="track-artist" id="trackArtist"></div>
+
+    <div class="intro" id="intro"></div>
+
+    <!-- Waveform -->
+    <div class="waveform" id="waveform"></div>
+
+    <!-- Progress -->
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="time-row">
+      <span id="timeElapsed">0:00</span>
+      <span id="timeDuration">0:30</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn" id="btnPrev" onclick="goBack()" disabled title="Previous">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+      <button class="btn btn-play" id="btnPlay" onclick="togglePlay()">
+        <svg viewBox="0 0 24 24" id="iconPlay"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="btn" id="btnNext" onclick="skipNext()" title="Next">
+        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+    </div>
+
+    <!-- Up next -->
+    <div class="up-next" id="upNext">
+      <img class="up-next-art" id="upNextArt" src="">
+      <div>
+        <div class="up-next-label">Up next</div>
+        <div class="up-next-name" id="upNextName"></div>
+        <div class="up-next-artist" id="upNextArtist"></div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history" id="history"></div>
+  </div>
+</div>
+
+<script>
+// ── State ───────────────────────────────────────────────────────────
+
+let currentTrack = null;
+let nextTrack = null;
+let history = [];        // [{name, artist, id}, ...]
+let playedIds = new Set();
+let audio = new Audio();
+let nextAudio = null;    // preloaded
+let isPlaying = false;
+let progressInterval = null;
+
+// ── Waveform bars ───────────────────────────────────────────────────
+
+function initWaveform() {
+  const wf = document.getElementById('waveform');
+  wf.innerHTML = '';
+  for (let i = 0; i < 40; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = (4 + Math.random() * 24) + 'px';
+    bar.style.animationDelay = (Math.random() * 0.8) + 's';
+    wf.appendChild(bar);
+  }
+}
+
+function setWaveformActive(active) {
+  document.querySelectorAll('.waveform .bar').forEach(b => {
+    b.classList.toggle('active', active);
+  });
+}
+
+// ── Color theming ───────────────────────────────────────────────────
+
+function applyColors(track) {
+  const bg = track.bg_color;
+  const fg = track.text_color;
+  if (bg) {
+    document.documentElement.style.setProperty('--bg', `rgb(${bg.red},${bg.green},${bg.blue})`);
+  }
+  if (fg) {
+    document.documentElement.style.setProperty('--fg', `rgb(${fg.red},${fg.green},${fg.blue})`);
+    document.documentElement.style.setProperty('--fg-dim', `rgba(${fg.red},${fg.green},${fg.blue},0.5)`);
+    document.documentElement.style.setProperty('--accent', `rgba(${fg.red},${fg.green},${fg.blue},0.1)`);
+  }
+}
+
+// ── Time formatting ─────────────────────────────────────────────────
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// ── UI updates ──────────────────────────────────────────────────────
+
+function updateTrackUI(track) {
+  document.getElementById('albumArt').src = track.image_url || '';
+  document.getElementById('albumArt').classList.remove('loading');
+  document.getElementById('trackName').textContent = track.name;
+  document.getElementById('trackArtist').textContent = track.artists;
+  document.getElementById('intro').textContent = track.intro || '';
+  const dur = track.duration_ms ? track.duration_ms / 1000 : 30;
+  document.getElementById('timeDuration').textContent = fmtTime(dur);
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('timeElapsed').textContent = '0:00';
+  applyColors(track);
+  initWaveform();
+}
+
+function updateUpNext(track) {
+  const el = document.getElementById('upNext');
+  if (track) {
+    document.getElementById('upNextArt').src = track.image_small || track.image_url || '';
+    document.getElementById('upNextName').textContent = track.name;
+    document.getElementById('upNextArtist').textContent = track.artists;
+    el.classList.add('visible');
+  } else {
+    el.classList.remove('visible');
+  }
+}
+
+function updateHistory() {
+  const el = document.getElementById('history');
+  if (history.length === 0) { el.innerHTML = ''; return; }
+  const recent = history.slice(-5).reverse();
+  el.innerHTML = `<div class="history-title">Previously played</div>` +
+    recent.map(h => `<div class="history-item">${h.name} — ${h.artist}</div>`).join('');
+}
+
+function setPlayIcon(playing) {
+  const svg = document.getElementById('iconPlay');
+  svg.innerHTML = playing
+    ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+}
+
+// ── Progress tracking ───────────────────────────────────────────────
+
+function startProgress() {
+  stopProgress();
+  progressInterval = setInterval(() => {
+    if (audio && audio.duration && !audio.paused) {
+      const pct = (audio.currentTime / audio.duration) * 100;
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('timeElapsed').textContent = fmtTime(audio.currentTime);
+    }
+  }, 200);
+}
+
+function stopProgress() {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+}
+
+// ── API calls ───────────────────────────────────────────────────────
+
+async function fetchStart() {
+  const resp = await fetch('/api/start');
+  return resp.json();
+}
+
+async function fetchNext(current) {
+  const resp = await fetch('/api/next', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      current_name: current.name,
+      current_artist: current.artists,
+      current_id: current.id,
+      history: history.map(h => ({ name: h.name, artist: h.artist, id: h.id })),
+    }),
+  });
+  return resp.json();
+}
+
+// ── Prefetch next track ─────────────────────────────────────────────
+
+async function prefetchNext() {
+  updateUpNext(null);
+  try {
+    const track = await fetchNext(currentTrack);
+    if (track.error) { console.error(track.error); return; }
+    nextTrack = track;
+
+    // Preload audio
+    nextAudio = new Audio();
+    nextAudio.preload = 'auto';
+    nextAudio.src = track.preview_url;
+    nextAudio.load();
+
+    updateUpNext(track);
+  } catch (e) {
+    console.error('Prefetch failed:', e);
+  }
+}
+
+// ── Playback ────────────────────────────────────────────────────────
+
+function playTrack(track) {
+  // Push previous to history
+  if (currentTrack) {
+    history.push({ name: currentTrack.name, artist: currentTrack.artists, id: currentTrack.id });
+    playedIds.add(currentTrack.id);
+    updateHistory();
+  }
+
+  currentTrack = track;
+  playedIds.add(track.id);
+  updateTrackUI(track);
+  document.getElementById('btnPrev').disabled = history.length === 0;
+
+  // Use preloaded audio if available
+  if (nextAudio && nextAudio.src === track.preview_url) {
+    audio.pause();
+    audio = nextAudio;
+    nextAudio = null;
+  } else {
+    audio.pause();
+    audio = new Audio(track.preview_url);
+  }
+
+  audio.play();
+  isPlaying = true;
+  setPlayIcon(true);
+  setWaveformActive(true);
+  startProgress();
+
+  audio.onended = () => {
+    isPlaying = false;
+    setPlayIcon(false);
+    setWaveformActive(false);
+    stopProgress();
+    advanceToNext();
+  };
+
+  // Start prefetching next track immediately
+  nextTrack = null;
+  prefetchNext();
+}
+
+function advanceToNext() {
+  if (nextTrack) {
+    playTrack(nextTrack);
+    nextTrack = null;
+  } else {
+    // Still loading — show loading state, wait
+    document.getElementById('albumArt').classList.add('loading');
+    document.getElementById('intro').textContent = 'Finding the next track...';
+    const check = setInterval(() => {
+      if (nextTrack) {
+        clearInterval(check);
+        playTrack(nextTrack);
+        nextTrack = null;
+      }
+    }, 300);
+  }
+}
+
+// ── Controls ────────────────────────────────────────────────────────
+
+function togglePlay() {
+  if (!audio.src) return;
+  if (audio.paused) {
+    audio.play();
+    isPlaying = true;
+    setPlayIcon(true);
+    setWaveformActive(true);
+    startProgress();
+  } else {
+    audio.pause();
+    isPlaying = false;
+    setPlayIcon(false);
+    setWaveformActive(false);
+    stopProgress();
+  }
+}
+
+function skipNext() {
+  audio.pause();
+  stopProgress();
+  setWaveformActive(false);
+  advanceToNext();
+}
+
+function goBack() {
+  if (history.length === 0) return;
+  // Can't truly go back (no stored audio), but could re-fetch
+  // For now, just a placeholder
+}
+
+// ── Start ───────────────────────────────────────────────────────────
+
+async function startRadio() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('player').style.display = 'block';
+  document.getElementById('intro').textContent = 'Starting up...';
+  initWaveform();
+
+  const track = await fetchStart();
+  if (track.error) {
+    document.getElementById('intro').textContent = 'Failed to start. Refresh to try again.';
+    return;
+  }
+  playTrack(track);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  if (e.code === 'ArrowRight') { skipNext(); }
+});
+</script>
+</body>
+</html>
